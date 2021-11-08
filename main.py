@@ -64,18 +64,18 @@ class Board:
     # Прорисовка поля
     def draw_board(self):
         self.surface.fill(blue_1)
-        # border = pygame.draw.rect(self.surface, light_cyan, self.surface.get_rect(), self.margin)  # рамка
+        pygame.draw.rect(self.surface, light_cyan, self.surface.get_rect(), 3)  # рамка
         for i in range(self.size - 1):                                          # цикл прорисовки линий
             # вертикальная линия
             x1 = x2 = self.block_size * (i + 1)
             y1 = 0
             y2 = self.width
-            pygame.draw.line(self.surface, light_cyan, (x1, y1), (x2, y2), 1)
+            pygame.draw.line(self.surface, light_cyan, (x1, y1), (x2, y2), 5)
             # горизонтальная линия
             x1 = 0
             y1 = y2 = self.block_size * (i + 1)
             x2 = self.width
-            pygame.draw.line(self.surface, light_cyan, (x1, y1), (x2, y2), 1)
+            pygame.draw.line(self.surface, light_cyan, (x1, y1), (x2, y2), 5)
 
     # функция проверки победы
     def win_check(self, length=3):
@@ -202,21 +202,31 @@ gray = (128, 128, 128)
 darkgray = (169, 169, 169)
 light_cyan = (224, 255, 255)
 blue_1 = (102, 161, 210)
+blue_2 = (33, 90, 136)
 
-win_width = 600                    # ширина окна
-win_height = 600                   # высота окна
+win_width = 1000                    # ширина окна
+win_height = 800                   # высота окна
+padding = 100
+board_height = board_width = win_height - padding * 2    # высота поля
+board_position_x = win_width - board_width - padding            # положение поверхности игрового поля в основном экране
+board_position_y = padding
+
 FPS = 50                           # количество кадров, для определения задержки
-font = pygame.font.SysFont(None, 25, bold=True)     # Определение объекта-шрифта
+font = pygame.font.SysFont(None, 20, bold=True)     # Определение объекта-шрифта
 
 screen = pygame.display.set_mode((win_width, win_height))     # инициализация основного окна
+icon = pygame.image.load("icon.bmp")
+pygame.display.set_icon(icon)                                 # иконка 32x32
+screen.fill(blue_2)
+board_surface = pygame.Surface((board_width, board_height))    # создание поверхности для игрового поля
 pygame.display.set_caption('Крестики-нолики')                                   # надпись на окне
 
 clock = pygame.time.Clock()         # инициализация объекта часов, используемого для задержки
 
 # Предшествующие игре действия
 board_size = 5
-win_length = 4
-game_board = Board(board_size, screen)       # создание объекта-поля для игры
+win_length = 3
+game_board = Board(board_size, board_surface)       # создание объекта-поля для игры
 
 player = 1                          # ходит первый игрок
 board_is_active = True              # доска активирована
@@ -230,38 +240,45 @@ while True:
             pygame.quit()
             sys.exit(0)
 
-        if event.type == pygame.MOUSEBUTTONDOWN:    # клик ЛКМ по окну
-            if board_is_active:
-                mouseX = event.pos[0]                   # получаем координаты клика
+        if event.type == pygame.MOUSEBUTTONDOWN:    # клик мышью
+            if event.button == 1:                   # если ЛКМ
+                mouseX = event.pos[0]  # получаем координаты клика
                 mouseY = event.pos[1]
-                col = mouseX // game_board.block_size   # определяем выбранную ячейку
-                row = mouseY // game_board.block_size
 
-                if game_board.spot_available(row, col):     # если ячейка свободна
-                    if player == 1:                         # рисуем знак в зависимости от хода и переходим на след. ход
-                        game_board.place_sign(row, col, 1)
-                        player = 2
-                    elif player == 2:
-                        game_board.place_sign(row, col, 2)
-                        player = 1
+                if board_is_active and board_surface.get_rect(left=board_position_x, top=board_position_y)\
+                        .collidepoint(event.pos):   # проверяем активность поля и производится ли клик внутри него
 
-                    wins_table = game_board.win_check(win_length)   # получаем таблицу с выйгрышными ячейками
-                    for row in range(len(wins_table)):              # цикл по всем ячейкам
-                        for col in range(len(wins_table)):
-                            if wins_table[row][col]:                # если ячейка не нулевая, рисуем линию
-                                game_board.draw_win_line(col, row, wins_table[row][col], win_length, 10)
-                                game_finished = True                # игра кончается
-                                board_is_active = False             # доска отключается
-                                if player == 2:             # проверка обратная, так как игрок уже был изменен
-                                    end_message('Победа крестиков! Нажмите SPACE для новой игры',
-                                                (33, 90, 136), font, screen)
-                                elif player == 1:
-                                    end_message('Победа ноликов! Нажмите SPACE для новой игры',
-                                                (33, 90, 136), font, screen)
+                    mouseX -= board_position_x    # получаем координаты относительно игровой поверхности
+                    mouseY -= board_position_y
 
-                    if not game_finished and game_board.is_full():
-                        end_message('Ничья! Нажмите SPACE для новой игры',
-                                    (33, 90, 136), font, screen)
+                    col = mouseX // game_board.block_size   # определяем выбранную ячейку
+                    row = mouseY // game_board.block_size
+
+                    if game_board.spot_available(row, col):     # если ячейка свободна
+                        if player == 1:                         # рисуем знак в зависимости от хода и переходим на с.х.
+                            game_board.place_sign(row, col, 1)
+                            player = 2
+                        elif player == 2:
+                            game_board.place_sign(row, col, 2)
+                            player = 1
+
+                        wins_table = game_board.win_check(win_length)   # получаем таблицу с выйгрышными ячейками
+                        for row in range(len(wins_table)):              # цикл по всем ячейкам
+                            for col in range(len(wins_table)):
+                                if wins_table[row][col]:                # если ячейка не нулевая, рисуем линию
+                                    game_board.draw_win_line(col, row, wins_table[row][col], win_length, 10)
+                                    game_finished = True                # игра кончается
+                                    board_is_active = False             # доска отключается
+                                    if player == 2:             # проверка обратная, так как игрок уже был изменен
+                                        end_message('Победа крестиков! Нажмите SPACE для новой игры',
+                                                    blue_2, font, board_surface)
+                                    elif player == 1:
+                                        end_message('Победа ноликов! Нажмите SPACE для новой игры',
+                                                    blue_2, font, board_surface)
+
+                        if not game_finished and game_board.is_full():
+                            end_message('Ничья! Нажмите SPACE для новой игры',
+                                        blue_2, font, board_surface)
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
@@ -270,11 +287,12 @@ while True:
                 pass
             if event.key == pygame.K_SPACE:             # при нажатии пробела создаем новую доску
                 del game_board                          # удаляем старый объект (на всякий случай)
-                game_board = Board(board_size, screen)
+                game_board = Board(board_size, board_surface)
                 player = 1
                 board_is_active = True
                 game_finished = False
 
     # Конец цикла
+    screen.blit(board_surface, (board_position_x, board_position_y))
     pygame.display.update()         # обновление экрана (прорисовка)
     clock.tick(FPS)                 # задержка перед следующим кадром
