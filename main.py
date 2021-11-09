@@ -18,6 +18,83 @@ def end_message(text, color, font, surface, background_color=(143, 192, 233), bo
     surface.blit(message_window, message_window_rect)   # прорисовываем окошко с надписью на поверхности
 
 
+def exit_button_click():
+    pygame.quit()
+    sys.exit(0)
+
+def restart_button_click():
+    global game_board, player, board_is_active, game_finished
+    del game_board  # удаляем старый объект (на всякий случай)
+    game_board = Board(board_size, board_surface)
+    player = 1
+    board_is_active = True
+    game_finished = False
+
+# Класс кнопки
+class Button:
+    def __init__(self, pos, size, text, font='Arial', font_size=20,
+                 background_color='white', text_color='black',
+                 clicked_bg_color='black', clicked_text_color='white',
+                 hover_bg_color='gray', hover_text_color='black'):
+        self.x, self.y = pos                                # устанавливаем позицию и размеры
+        self.width, self.height = size
+        self.font = pygame.font.SysFont(font, font_size)    # создаем объект шрифта
+        self.text = text
+        self.background_color = self.normal_bg_color = background_color
+        self.text_color = self.normal_text_color = text_color
+        self.hovered_bg_color = hover_bg_color
+        self.hovered_text_color = hover_text_color
+        self.clicked_bg_color = clicked_bg_color
+        self.clicked_text_color = clicked_text_color
+        self.surface = pygame.Surface((self.width, self.height))    # создаем поверхность кнопки
+        self.rect = self.surface.get_rect(topleft=pos)             # создаем прямоугольник по размерам и месту кнопки
+        self.clicked = False                                # изначально кнопка не кликнута
+
+    # прорисовка кнопки на основном экране
+    def draw(self):
+        self.surface.fill(self.background_color)                    # заполняем поверхность кнопки цветом
+        text_surface = self.font.render(self.text, True, self.text_color)   # создаем надпись с ее поверхностью
+        # получаем прямоугольник с центром в центре кнопки
+        text_rect = text_surface.get_rect(center=(self.surface.get_rect().width / 2, self.surface.get_rect().height / 2))
+        self.surface.blit(text_surface, text_rect)      # прорисовываем надпись на поверхности кнопки
+        screen.blit(self.surface, (self.x, self.y))     # прорисовываем кнопку на основном экране
+
+    # функция определяющая состояние кнопки (обычное, наведение, клик)
+    def get_state(self):
+        mouse_pos = pygame.mouse.get_pos()      # получаем позицию мыши
+        if self.rect.collidepoint(mouse_pos):   # если мышь находится в прямоугольнике кнопки
+            if pygame.mouse.get_pressed()[0] == 1:     # если при этом нажата ЛКМ
+                return 'clicked'                # состояние - нажатая
+            else:
+                return 'hovered'                # находится в прямоуг., но нет нажатия, то состояние - наведенная
+        else:
+            return 'none'                       # не находится в прямоуг. - состояние никакое
+
+    # функция обновляющая вид кнопки в зависимости от состояния и возвращающая bool, указывающий стоит ли делать
+    # соответствующие кнопке действие
+    def update(self):
+        action = False                      # изначально действия делать не нужно
+
+        if self.get_state() == 'hovered':
+            self.background_color = self.hovered_bg_color
+            self.text_color = self.hovered_text_color
+            self.clicked = False
+        elif self.get_state() == 'clicked':
+            self.background_color = self.clicked_bg_color
+            self.text_color = self.clicked_text_color
+            if not self.clicked:            # действие совершается только тогда, когда кнопка кликнута и не зажата,
+                self.clicked = True         # то есть прошлое состояние не было кликом. Действие выполняется один
+                action = True               # раз сразу же по нажатию
+        else:
+            self.background_color = self.normal_bg_color
+            self.text_color = self.normal_text_color
+            self.clicked = False
+
+        self.draw()                         # рисуем кнопку с заданным дизайном
+        return action                       # возвращаем указание к действию (или бездействию)
+
+
+
 # Класс для игрового поля
 class Board:
     def __init__(self, size, surface):
@@ -204,7 +281,7 @@ light_cyan = (224, 255, 255)
 blue_1 = (102, 161, 210)
 blue_2 = (33, 90, 136)
 
-win_width = 1000                    # ширина окна
+win_width = 1100                    # ширина окна
 win_height = 800                   # высота окна
 padding = 100
 board_height = board_width = win_height - padding * 2    # высота поля
@@ -212,7 +289,7 @@ board_position_x = win_width - board_width - padding            # положен
 board_position_y = padding
 
 FPS = 50                           # количество кадров, для определения задержки
-font = pygame.font.SysFont(None, 20, bold=True)     # Определение объекта-шрифта
+font = pygame.font.SysFont(None, 30, bold=True)     # Определение объекта-шрифта
 
 screen = pygame.display.set_mode((win_width, win_height))     # инициализация основного окна
 icon = pygame.image.load("icon.bmp")
@@ -225,12 +302,16 @@ clock = pygame.time.Clock()         # инициализация объекта 
 
 # Предшествующие игре действия
 board_size = 5
-win_length = 3
+win_length = 6
 game_board = Board(board_size, board_surface)       # создание объекта-поля для игры
 
 player = 1                          # ходит первый игрок
 board_is_active = True              # доска активирована
 game_finished = False               # игра не закончена
+
+
+exit_button = Button((50, 650), (300, 50), 'Выход',font_size=30, hover_bg_color=red)     # кнопка выход
+restart_button = Button((50, 550), (300, 50), 'Начать заново', font_size=30)             # кнопка рестарта
 
 # основной цикл игры
 while True:
@@ -270,14 +351,14 @@ while True:
                                     game_finished = True                # игра кончается
                                     board_is_active = False             # доска отключается
                                     if player == 2:             # проверка обратная, так как игрок уже был изменен
-                                        end_message('Победа крестиков! Нажмите SPACE для новой игры',
+                                        end_message('Победа крестиков!',
                                                     blue_2, font, board_surface)
                                     elif player == 1:
-                                        end_message('Победа ноликов! Нажмите SPACE для новой игры',
+                                        end_message('Победа ноликов!',
                                                     blue_2, font, board_surface)
 
                         if not game_finished and game_board.is_full():
-                            end_message('Ничья! Нажмите SPACE для новой игры',
+                            end_message('Ничья!',
                                         blue_2, font, board_surface)
 
         if event.type == pygame.KEYDOWN:
@@ -286,11 +367,13 @@ while True:
             if event.key == pygame.K_RIGHT:
                 pass
             if event.key == pygame.K_SPACE:             # при нажатии пробела создаем новую доску
-                del game_board                          # удаляем старый объект (на всякий случай)
-                game_board = Board(board_size, board_surface)
-                player = 1
-                board_is_active = True
-                game_finished = False
+                pass
+
+    # обновление состояний кнопок
+    if exit_button.update():
+        exit_button_click()
+    elif restart_button.update():
+        restart_button_click()
 
     # Конец цикла
     screen.blit(board_surface, (board_position_x, board_position_y))
