@@ -22,13 +22,89 @@ def exit_button_click():
     pygame.quit()
     sys.exit(0)
 
-def restart_button_click():
-    global game_board, player, board_is_active, game_finished
+def restart():
+    global game_board, player, board_is_active, game_finished, board_size, win_length, max_board_size, min_board_size, min_win_length
     del game_board  # удаляем старый объект (на всякий случай)
+    if len(text_box1.text) and min_board_size <= int(text_box1.text) <= max_board_size:
+        board_size = int(text_box1.text)
+        label1.text = f'Размер поля:              {board_size} x {board_size}'
+    if len(text_box2.text) and int(text_box2.text) >= min_win_length:
+        win_length = int(text_box2.text)
+        label2.text = f'Условие победы:     {win_length} в ряд'
     game_board = Board(board_size, board_surface)
     player = 1
     board_is_active = True
     game_finished = False
+
+
+# Класс поля ввода текста
+class TextBox:
+    def __init__(self, pos, size,
+                 color_active='red', color_inactive='lightcyan',
+                 text='', font='None', font_size=24):
+        self.x, self.y = pos
+        self.width, self.height = size
+        self.box_surface = pygame.Surface(size)
+        self.rect = self.box_surface.get_rect(bottomleft=(self.x, self.y))
+        self.color_active, self.color_inactive = color_active, color_inactive
+        self.color = self.color_inactive
+        self.is_active = False
+        self.text = text
+        self.font = pygame.font.SysFont(font, font_size)
+        self.draw()
+
+    def draw(self):
+        # заполнение поверхности цветом, прорисовка рамки, нанесение текста и нанесение самого поля
+        self.box_surface.fill(self.color)
+        pygame.draw.rect(self.box_surface, black, self.box_surface.get_rect() , width=1)
+        self.box_surface.blit(self.font.render(self.text, True, black), (3,2))
+        screen.blit(self.box_surface, self.rect)
+
+    # метод обработки нажатия мыши (для активации поля ввода)
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # если игрок кликнул по полю ввода
+            if self.rect.collidepoint(event.pos):
+                 # сделать поле активным
+                self.is_active = True
+            else:   # иначе, сделать неактивным
+                self.is_active = False
+        # нажатие клавишь при выбранном поле ввода
+        elif event.type == pygame.KEYDOWN:
+            if self.is_active:
+                if event.key == pygame.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                elif event.unicode in ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0'):
+                    self.text += event.unicode
+
+
+    def update(self):
+        if self.is_active:
+            self.color = self.color_active
+        else:
+            self.color = self.color_inactive
+        self.draw()
+
+
+
+# Класс надписи
+class Label:
+    def __init__(self, x, y, text, surface, font='None', font_size=20, color='black', x_centered=False):
+        self.font = pygame.font.SysFont(font, font_size)
+        self.text = text
+        self.color = color
+        self.surface = surface
+        self.x = x
+        self.y = y
+        self.x_centered = x_centered
+
+    def draw(self): # возможно бессмысленна, как и этот класс в целом
+        text_surface = self.font.render(self.text, True, self.color)
+        if self.x_centered:
+            self.x = self.surface.get_rect().width / 2 - text_surface.get_rect().width / 2
+        text_rect = text_surface.get_rect(bottomleft=(self.x, self.y))
+        self.surface.blit(text_surface, text_rect)
+
 
 # Класс кнопки
 class Button:
@@ -48,7 +124,8 @@ class Button:
         self.clicked_text_color = clicked_text_color
         self.surface = pygame.Surface((self.width, self.height))    # создаем поверхность кнопки
         self.rect = self.surface.get_rect(topleft=pos)             # создаем прямоугольник по размерам и месту кнопки
-        self.clicked = False                                # изначально кнопка не кликнута
+        self.state = 'none'
+        self.clicked = False
 
     # прорисовка кнопки на основном экране
     def draw(self):
@@ -141,7 +218,7 @@ class Board:
     # Прорисовка поля
     def draw_board(self):
         self.surface.fill(blue_1)
-        pygame.draw.rect(self.surface, light_cyan, self.surface.get_rect(), 3)  # рамка
+        pygame.draw.rect(self.surface, light_cyan, self.surface.get_rect(), 5)  # рамка
         for i in range(self.size - 1):                                          # цикл прорисовки линий
             # вертикальная линия
             x1 = x2 = self.block_size * (i + 1)
@@ -288,7 +365,7 @@ board_height = board_width = win_height - padding * 2    # высота поля
 board_position_x = win_width - board_width - padding            # положение поверхности игрового поля в основном экране
 board_position_y = padding
 
-FPS = 50                           # количество кадров, для определения задержки
+FPS = 100                           # количество кадров, для определения задержки
 font = pygame.font.SysFont(None, 30, bold=True)     # Определение объекта-шрифта
 
 screen = pygame.display.set_mode((win_width, win_height))     # инициализация основного окна
@@ -301,17 +378,53 @@ pygame.display.set_caption('Крестики-нолики')                     
 clock = pygame.time.Clock()         # инициализация объекта часов, используемого для задержки
 
 # Предшествующие игре действия
-board_size = 5
-win_length = 6
+board_size = 3
+win_length = 3
+max_board_size = 25
+min_board_size = 2
+min_win_length = 2
 game_board = Board(board_size, board_surface)       # создание объекта-поля для игры
 
 player = 1                          # ходит первый игрок
 board_is_active = True              # доска активирована
 game_finished = False               # игра не закончена
 
+# элементы интерфейса
+# панели (плоскости)
+panel1 = pygame.Surface((300, 110))
+panel1_rect = panel1.get_rect()
+panel1.fill(blue_1)
+panel2 = pygame.Surface((300, 250))
+panel2_rect = panel2.get_rect()
+panel2.fill(blue_1)
 
-exit_button = Button((50, 650), (300, 50), 'Выход',font_size=30, hover_bg_color=red)     # кнопка выход
-restart_button = Button((50, 550), (300, 50), 'Начать заново', font_size=30)             # кнопка рестарта
+# кнопки
+restart_button = Button((padding/2, 575), (300, 50), 'Начать заново', font_size=30, background_color=light_cyan, hover_bg_color='purple')             # кнопка рестарта
+exit_button = Button((padding/2, 650), (300, 50), 'Выход',font_size=30, hover_bg_color=red, background_color=light_cyan)     # кнопка выход
+
+# надписи
+static_label1 = Label(0, 30, 'Текущие правила', panel1, font_size=30, x_centered=True)
+static_label2 = Label(0, 30, 'Новые правила', panel2, font_size=30, x_centered=True)
+static_label3  = Label(5, 65, 'Размер поля: ', panel2, font_size=24)
+static_label4  = Label(5, 95, 'Условие победы: ', panel2, font_size=24)
+static_label5 = Label(5, 135, f'Ограничения:', panel2, font_size=24,
+                      color=light_cyan)
+static_label6 = Label(5, 155, f'Размер поля от {min_board_size} до {max_board_size}', panel2, font_size=24,
+                      color=light_cyan)
+static_label7  = Label(5, 175, f'Условие победы больше {min_win_length - 1}', panel2, font_size=24, color=light_cyan)
+static_label8  = Label(5, 220, 'Новые правила применяются после', panel2, font_size=24, color=light_cyan)
+static_label9  = Label(5, 240, 'перезапуска', panel2, font_size=24, color=light_cyan, x_centered=True)
+
+
+label1 = Label(5, 65, f'Размер поля:              {board_size} x {board_size}', panel1, font_size=24)
+label2 = Label(5, 95, f'Условие победы:     {win_length} в ряд', panel1, font_size=24)
+labels = (label1, label2, static_label1, static_label2, static_label3, static_label4, static_label5, static_label6,
+          static_label7, static_label8, static_label9)
+
+# поля ввода текста
+text_box1 = TextBox((220, 315), (100, 17))
+text_box2 = TextBox((220, 345), (100, 17))
+text_boxes = (text_box1, text_box2)
 
 # основной цикл игры
 while True:
@@ -367,13 +480,26 @@ while True:
             if event.key == pygame.K_RIGHT:
                 pass
             if event.key == pygame.K_SPACE:             # при нажатии пробела создаем новую доску
-                pass
+                restart()
+
+        # обрабатываем поля ввода текста
+        for box in text_boxes:
+            box.handle_event(event)
+
+    panel1.fill(blue_1)
+    panel2.fill(blue_1)
+    for label in labels:
+        label.draw()
+    screen.blit(panel1, (padding / 2, padding))
+    screen.blit(panel2, (padding / 2, 250))
 
     # обновление состояний кнопок
     if exit_button.update():
         exit_button_click()
-    elif restart_button.update():
-        restart_button_click()
+    if restart_button.update():
+        restart()
+    for box in text_boxes:
+        box.update()
 
     # Конец цикла
     screen.blit(board_surface, (board_position_x, board_position_y))
