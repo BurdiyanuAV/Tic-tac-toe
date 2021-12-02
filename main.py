@@ -418,7 +418,8 @@ static_label9  = Label(5, 240, 'перезапуска', panel2, font_size=24, c
 
 label1 = Label(5, 65, f'Размер поля:              {board_size} x {board_size}', panel1, font_size=24)
 label2 = Label(5, 95, f'Условие победы:     {win_length} в ряд', panel1, font_size=24)
-labels = (label1, label2, static_label1, static_label2, static_label3, static_label4, static_label5, static_label6,
+label3 = Label(570, 70, 'Ход крестиков', screen, font='Consolas', font_size=35)
+labels = (label1, label2, label3, static_label1, static_label2, static_label3, static_label4, static_label5, static_label6,
           static_label7, static_label8, static_label9)
 
 # поля ввода текста
@@ -428,6 +429,7 @@ text_boxes = (text_box1, text_box2)
 
 # основной цикл игры
 while True:
+    screen.fill(blue_2)
     # Цикл обработки событий
     for event in pygame.event.get():
         if event.type == pygame.QUIT:           # выход из программы
@@ -485,6 +487,11 @@ while True:
         # обрабатываем поля ввода текста
         for box in text_boxes:
             box.handle_event(event)
+
+    if player == 1:
+        label3.text = "Ход крестиков"
+    else:
+        label3.text = "Ход ноликов"
 
     panel1.fill(blue_1)
     panel2.fill(blue_1)
